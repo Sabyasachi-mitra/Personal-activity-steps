@@ -1,0 +1,110 @@
+---
+title: "Activity"
+author: "Sabyasachi Mitra"
+date: "November 15, 2016"
+output: html_document
+---
+## Library required
+```{r, echo=TRUE}
+library(doBy)
+library(data.table)
+library(plyr)
+library(dplyr)
+```
+
+## Loading and processing the data
+```{r, echo = TRUE}
+setwd("e://my learning/coursera/reproducible research")
+activity <- read.csv("activity.csv", header = TRUE, sep = ",")
+head(activity)
+```
+
+## Mean total number of steps taken per day:
+```{r, echo=TRUE}
+activity1 <- na.exclude(activity)
+activity_day <- as.data.table(activity1)
+activity_day_sum <- activity_day[, lapply(.SD, sum), by = date]
+
+###plotting of histogram
+library(ggplot2)
+ggplot(activity_day_sum, aes(x=date, y=steps)) + geom_bar(stat="identity")
+
+#Mean ad Median of each day
+mean_median <- summaryBy(steps ~ date, data = activity1, FUN = list(mean, max, min, median, sd))
+tail(mean_median)
+```
+
+## Average daily activity plan and time series plot :
+```{r, echo=TRUE}
+activity_day_mean <- activity_day[, lapply(.SD, mean), by = date]
+head(activity_day_mean)
+plot(steps~date, activity_day_mean, type = "l", xlab = "Daily date", main = "Steps per day", ylab= "Avg steps", col = "red")
+maxstep_day <- ddply(activity_day,.(date),summarise,max(steps))
+names(maxstep_day)<-c("Day","Maximum")
+maxstep_day
+```
+
+## Input of missing values
+```{r, echo=TRUE}
+activity <- read.csv("activity.csv", header = TRUE, sep = ",")
+activity$steps[is.na(activity$steps)] = mean(activity$steps, na.rm=TRUE)
+activity2 <- activity
+head(activity2)
+
+# selecting filled data as a ew data set 
+activity_day2 <- as.data.table(activity2)
+activity_day_sum2 <- activity_day2[, lapply(.SD, sum), by = date]
+
+# plotting of histogram
+library(ggplot2)
+ggplot(activity_day_sum2, aes(x=date, y=steps)) + geom_bar(stat="identity")
+
+# Mean ad Median of each day
+mean_median2 <- summaryBy(steps ~ date, data = activity2, FUN = list(mean, max, min, median, sd))
+head(mean_median2)
+
+# extracting mean and median in different dataset for comparing
+mean1 <- mean_median$steps.mean
+meadian <- mean_median$steps.median
+mean2 <- mean_median2$steps.mean
+median2 <- mean_median2$steps.median
+x <- 1:100
+head(x)
+
+
+# Differece between means
+p <- ggplot() + 
+  geom_line(data = mean_median, aes(x = date, y = steps.mean , color = "red"), group = 1, lwd = 1) +
+  geom_line(data = mean_median2, aes(x = date, y = steps.mean, color = "blue"), group = 1, lwd = 1)  +
+  xlab('data_date') +
+  ylab('percent.change')
+p
+
+# Differennce between medians
+q <- ggplot() + 
+  geom_line(data = mean_median, aes(x = date, y = steps.median , color = "red"), group = 1, lwd = 1) +
+  geom_line(data = mean_median2, aes(x = date, y = steps.median, color = "blue"), group = 1, lwd = 1)  +
+  xlab('data_date') +
+  ylab('percent.change')
+q
+```
+
+## Weekdays and weekends
+```{r, echo=TRUE}
+# Making of weekdays and weekends
+activity2$date <- as.Date(activity2$date)
+weekd <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
+activity2$Day <- factor((weekdays(activity2$date) %in% weekd), 
+         levels=c(FALSE, TRUE), labels=c('weekend', 'weekday')) 
+head(activity2)
+
+# Mean of the datas
+activity3 <- activity2
+acti <- as.data.table(activity3)
+act <- acti[,lapply(.SD,mean,na.rm=TRUE),by=c('date','Day','interval')]
+
+# Plotting of the above data
+library(lattice)
+xyplot(steps ~ interval | Day, data = act, layout = c(1, 2), type = "l")
+```
+
